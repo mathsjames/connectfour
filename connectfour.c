@@ -1,4 +1,9 @@
 #include<stdio.h>
+#include<stdlib.h>
+#include<time.h>
+//#include<math.h>
+
+const char MAXDEPTH=9;
 
 typedef struct movet movet;
 struct movet {
@@ -11,6 +16,27 @@ struct history {
   char hist[42];
   char length;
 };
+
+typedef struct gamestate gamestate;
+struct gamestate {
+  char state[7][6];
+  char heights[7];
+  history hist;
+  char plys;
+};
+
+double mypow(double a,char b) {
+  if (b<0) {
+    b=-b;
+    a=1/a;
+  }
+  double out=1;
+  while (b!=0) {
+    out=out*a;
+    b--;
+  }
+  return out;
+}
 
 int hashstate(char** state) {
   
@@ -60,7 +86,7 @@ char inaline(char state[7][6],char col,char row) {
   len=1;
   //horizontal
   for (cc=col+1;cc<7; cc++) {
-    if (state[cc][cr]==player) {
+    if (state[cc][row]==player) {
       len++;
     }
     else {
@@ -68,7 +94,7 @@ char inaline(char state[7][6],char col,char row) {
     }
   }
   for (cc=col-1;cc>=0; cc--) {
-    if (state[cc][cr]==player) {
+    if (state[cc][row]==player) {
       len++;
     }
     else {
@@ -81,33 +107,78 @@ char inaline(char state[7][6],char col,char row) {
   return (row>2 && state[col][row-1]==player && state[col][row-2]==player && state[col][row-3]==player);
 }
 
-char makemove(char move, char state[7][6], char heights[7], history hist, char plys) {
-  char player=1+plys%2;
-  state[move][heights[move]]=player;
-  heights[move]++;
-  hist.hist[hist.length]=move;
-  hist.length++;
-  return inaline(state,move,heights[move]-1); // should return haswon
+char makemove(char move, gamestate* pgame) {
+  char player=1+(*pgame).plys%2;
+  (*pgame).plys++;
+  (*pgame).state[move][(*pgame).heights[move]]=player;
+  (*pgame).heights[move]++;
+  (*pgame).hist.hist[(*pgame).hist.length]=move;
+  (*pgame).hist.length++;
+  //printstate((*pgame).state);
+  return inaline((*pgame).state,move,(*pgame).heights[move]-1); // returns whether or not player has won
 }
 
-movet findmove(char state[7][6], char* heights, history hist) {
+void undomove(gamestate* pgame) {
+  (*pgame).hist.length--;
+  char move=(*pgame).hist.hist[(*pgame).hist.length];
+  (*pgame).heights[move]--;
+  (*pgame).state[move][(*pgame).heights[move]]=0;
+  (*pgame).plys--;
+}
+
+movet findmove(gamestate* pgame, char depth) {
   movet retval;
   char move;
-  for (move=0;move<7;move++) {
-    if (1) {
-      retval.move=move;
-      retval.qual=21;
-      return retval;
+  char qual[7], nextqual;
+  retval.move=0;
+  retval.qual=-43;
+  if (depth<MAXDEPTH) {
+    for (move=0;move<7;move++) {
+      if ((*pgame).heights[move]<6) {
+	if (makemove(move,pgame)) {
+	  qual[move]=42;
+	}
+	else {
+	  nextqual=findmove(pgame,depth+1).qual;
+	  qual[move]=-nextqual+(nextqual>0 ? 1:-1);
+	}
+	undomove(pgame);
+	if (qual[move]>retval.qual) {
+	  retval.qual=qual[move];
+	  retval.move=move;
+	}
+      }
+      else {
+	qual[move]=-100;
+      }
     }
   }
-  for (move=0;move<7;move++) {
-    
+  else {
+    retval.qual=0;
   }
+  if (depth==0) {
+    double probs[7];
+    double sum;
+    for (move=0;move<7;move++) {
+      probs[move]=mypow(5,qual[move]);
+      sum=sum+probs[move];
+    }
+    double u=sum*rand()/((double) RAND_MAX);
+    double tot=0;
+    for (move=0;move<7;move++) {
+      tot=tot+probs[move];
+      if (tot>u) {
+	retval.move=move;
+	break;
+      }
+    }
+  }
+  return retval;
 }
 
 void printstate(char state[7][6]) {
   char row,col;
-  printf("1 2 3 4 5 6 7 \n");
+  printf("\n1 2 3 4 5 6 7 \n");
   for (row=5;row>=0;row--) {
     for (col=0;col<7;col++) {
       printf("%d ",(int) state[col][row]);
@@ -125,44 +196,45 @@ char getmove(char player) {
 }
 
 int main () {
-  char state[7][6];
-  char heights[7];
+  gamestate game;
   for (char i=0;i<7;i++) {
     for (char j=0;j<6;j++) {
-      state[i][j]=0;
+      game.state[i][j]=0;
     }
-    heights[i]=0;
+    game.heights[i]=0;
   }
-      
+  game.hist.length=0;
+  game.plys=0;
 
-  char automated[3]={0,0,0};
+  
+  char automated[3]={0,1,1};
   char player=1;
-  char gameover=0;
   char move;
-  char plys=0;
-  history proj, gamehist;
-  movet tempmovet;
-  printstate(state);
-  while (!gameover) {
-    player=1+plys%2;
+  srand(time(NULL));
+
+  printstate(game.state);
+  while (1) {
+    player=1+game.plys%2;
     if (automated[player]==1) {
-      proj.length=0;
-      move=findmove(state,heights,proj).move;
+      printstate(game.state);
+      move=findmove(&game,0).move;
+      printstate(game.state);
+      printf("move %d player %d\n",move,player);
+      printf("heights %d %d %d %d %d %d %d\n",game.heights[0],game.heights[1],game.heights[2],game.heights[3],game.heights[4],game.heights[5],game.heights[6]);
     }
     else {
       move=getmove(player);
     }
-    char iswon=makemove(move,state,heights,gamehist,plys);
-    printstate(state);
+    char iswon=makemove(move,&game);
+    printstate(game.state);
     if (iswon) {
       printf("Player %d wins.\n",(int) player);
-      gameover=1;
+      break;
     }
-    else if (plys==41) {
+    else if (game.plys==42) {
       printf("The game is a draw.\n");
-      gameover=1;
+      break;
     }
-    plys++;
   }
   return 0;
 }
