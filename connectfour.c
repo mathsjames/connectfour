@@ -17,6 +17,13 @@ struct history {
   char length;
 };
 
+typedef struct traps traps;
+struct traps {
+  char active[7][6][2];
+  char all[7][6][2];
+  char histc[42];
+  char histt[84][2];
+}
 typedef struct gamestate gamestate;
 struct gamestate {
   char state[7][6];
@@ -107,6 +114,12 @@ char inaline(char state[7][6],char col,char row) {
   return (row>2 && state[col][row-1]==player && state[col][row-2]==player && state[col][row-3]==player);
 }
 
+void update(gamestate* pgame) {
+  char col=(*pgame).hist.hist[(*pgame).hist.length-1];
+  char row=(*pgame).heights[col]-1;
+  active[col][row]=0;
+}
+
 char makemove(char move, gamestate* pgame) {
   char player=1+(*pgame).plys%2;
   (*pgame).plys++;
@@ -114,11 +127,27 @@ char makemove(char move, gamestate* pgame) {
   (*pgame).heights[move]++;
   (*pgame).hist.hist[(*pgame).hist.length]=move;
   (*pgame).hist.length++;
+  updatetraps(pgame);
   //printstate((*pgame).state);
   return inaline((*pgame).state,move,(*pgame).heights[move]-1); // returns whether or not player has won
 }
 
+void reverttraps(gamestate* pgame) {
+  char trap, col, row;
+  char player=2-(plys%2);
+  for (trap=(*pgame).traps.histc[(*pgame).plys-1];trap<(*pgame).traps.histc[(*pgame).plys];trap++) {
+    col=(*pgame).traps.histt[trap][0];
+    row=(*pgame).traps.histt[trap][1];
+    all[row][col][player]=0;
+    active[row][col][player]=0;
+  }
+  col=(*pgame).hist.hist[(*pgame).hist.length-1];
+  row=(*pgame).heights[col]-1;
+  active[col][row]=all[col][row];
+}
+
 void undomove(gamestate* pgame) {
+  reverttraps(pgame);
   (*pgame).hist.length--;
   char move=(*pgame).hist.hist[(*pgame).hist.length];
   (*pgame).heights[move]--;
