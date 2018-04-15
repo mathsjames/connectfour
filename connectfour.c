@@ -3,7 +3,7 @@
 #include<time.h>
 //#include<math.h>
 
-const char MAXDEPTH=9;
+const char MAXDEPTH=14;
 
 typedef struct movet movet;
 struct movet {
@@ -126,26 +126,33 @@ void undomove(gamestate* pgame) {
   (*pgame).plys--;
 }
 
-movet findmove(gamestate* pgame, char depth) {
+movet findmove(gamestate* pgame, char depth, char a, char b) {
   movet retval;
   char move;
   char qual[7], nextqual;
   retval.move=0;
   retval.qual=-43;
-  if (depth<MAXDEPTH) {
-    for (move=0;move<7;move++) {
+  char offset=rand()%7;
+  if (depth<MAXDEPTH && (*pgame).plys<42) {
+    for (char cmove=0;cmove<7;cmove++) {
+      move=(cmove+offset)%7;
       if ((*pgame).heights[move]<6) {
 	if (makemove(move,pgame)) {
-	  qual[move]=42;
+	  nextqual=42;
 	}
 	else {
-	  nextqual=findmove(pgame,depth+1).qual;
-	  qual[move]=-nextqual+(nextqual>0 ? 1:-1);
+	  nextqual=findmove(pgame,depth+1,-b,-a).qual;
+	  nextqual=-nextqual;
 	}
 	undomove(pgame);
-	if (qual[move]>retval.qual) {
-	  retval.qual=qual[move];
+	if (nextqual>retval.qual) {
+	  retval.qual=nextqual;
 	  retval.move=move;
+	}
+	a=(retval.qual>a)?retval.qual:a;
+
+	if (b<=a) {
+	  break;
 	}
       }
       else {
@@ -153,14 +160,19 @@ movet findmove(gamestate* pgame, char depth) {
       }
     }
   }
-  else {
-    retval.qual=0;
+  else if (depth<MAXDEPTH) {
+    retval.qual=0;//drawn game
   }
-  if (depth==0) {
-    double probs[7];
+  else {
+    retval.qual=0;//heuristic value
+  }
+
+  
+  /*if (depth==0) {
+    char probs[7];
     double sum;
     for (move=0;move<7;move++) {
-      probs[move]=mypow(5,qual[move]);
+      probs[move]=(qual[move]==retval.qual);
       sum=sum+probs[move];
     }
     double u=sum*rand()/((double) RAND_MAX);
@@ -172,7 +184,7 @@ movet findmove(gamestate* pgame, char depth) {
 	break;
       }
     }
-  }
+    }*/
   return retval;
 }
 
@@ -207,7 +219,7 @@ int main () {
   game.plys=0;
 
   
-  char automated[3]={0,1,1};
+  char automated[3]={0,1,0};
   char player=1;
   char move;
   srand(time(NULL));
@@ -216,11 +228,11 @@ int main () {
   while (1) {
     player=1+game.plys%2;
     if (automated[player]==1) {
-      printstate(game.state);
-      move=findmove(&game,0).move;
-      printstate(game.state);
-      printf("move %d player %d\n",move,player);
-      printf("heights %d %d %d %d %d %d %d\n",game.heights[0],game.heights[1],game.heights[2],game.heights[3],game.heights[4],game.heights[5],game.heights[6]);
+      //printstate(game.state);
+      move=findmove(&game,0,-50,50).move;
+      //printstate(game.state);
+      //printf("move %d player %d\n",move,player);
+      //printf("heights %d %d %d %d %d %d %d\n",game.heights[0],game.heights[1],game.heights[2],game.heights[3],game.heights[4],game.heights[5],game.heights[6]);
     }
     else {
       move=getmove(player);
