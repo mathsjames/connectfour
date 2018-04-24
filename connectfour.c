@@ -23,13 +23,15 @@ struct traps {
   char all[7][6][2];
   char histc[42];
   char histt[84][2];
-}
+};
+
 typedef struct gamestate gamestate;
 struct gamestate {
   char state[7][6];
   char heights[7];
   history hist;
   char plys;
+  traps traps;
 };
 
 double mypow(double a,char b) {
@@ -48,7 +50,7 @@ double mypow(double a,char b) {
 int hashstate(char** state) {
   
 }
-
+/*
 char inaline(char state[7][6],char col,char row) {
   char player=state[col][row];
   char cc,cr;
@@ -113,37 +115,103 @@ char inaline(char state[7][6],char col,char row) {
   //down
   return (row>2 && state[col][row-1]==player && state[col][row-2]==player && state[col][row-3]==player);
 }
+*/
 
-void update(gamestate* pgame) {
+void addtrap(gamestate* pgame,char col, char row, char player,char trapnum) {
+  (*pgame).traps.histt[trapnum][0]=col;
+  (*pgame).traps.histt[trapnum][1]=row;
+  (*pgame).traps.all[col][row][player-1]=1;
+  (*pgame).traps.active[col][row][player-1]=1;
+}
+
+
+void updatetraps(gamestate* pgame,char player) {
   char col=(*pgame).hist.hist[(*pgame).hist.length-1];
   char row=(*pgame).heights[col]-1;
-  active[col][row]=0;
+  for (char pl=0; pl<2;pl++){
+  (*pgame).traps.active[col][row][pl]=0;
+  }
+  char trapnum=(*pgame).traps.histc[(*pgame).plys-1];
+  if (row>1 && row<5 && (*pgame).state[col][row-1]==player && (*pgame).state[col][row-2]==player) {
+    addtrap(pgame,col,row,player,trapnum);
+    trapnum++;
+  }
+  char otherplayer=player-3;
+  char dirr;
+  char ccol,crow;
+  char f,b;
+  char empc,empf,empb;
+  for (dirr=-1; dirr<2; dirr++) {
+    f=0;
+    empc=0;
+    crow=row+dirr;
+    ccol=col+1;
+    while (!(f>2 || crow>5 || crow<0  || ccol>6 || (*pgame).state[ccol][crow]==otherplayer)) {
+      f++;
+      if ((*pgame).state[ccol][crow]==0) {
+	if (empc==1) {break;}
+	empc=1;
+	empf=f;
+      }
+
+      ccol++;
+      crow+=dirr;
+    }
+    b=0;
+    empc=0;
+    crow=row-dirr;
+    ccol=col-1;
+    while (!(b>2 || crow>5 || crow<0  || ccol>6 || (*pgame).state[ccol][crow]==otherplayer)) {
+      b++;
+      if ((*pgame).state[ccol][crow]==0) {
+	if (empc==1) {break;}
+	empc=1;
+	empb=b;
+      }
+      ccol--;
+      crow-=dirr;
+    }
+    if (f+b>2) {
+      if (empb+f>3) {
+	addtrap(pgame,col+empf,row+empf*dirr,player,trapnum);
+	trapnum++;
+      }
+      if (empf+b>3) {
+	addtrap(pgame,col-empb,row-empb*dirr,player,trapnum);
+	trapnum++;
+      }
+    }    
+  }
+  (*pgame).traps.histc[(*pgame).plys]=trapnum;
 }
 
 char makemove(char move, gamestate* pgame) {
   char player=1+(*pgame).plys%2;
   (*pgame).plys++;
   (*pgame).state[move][(*pgame).heights[move]]=player;
+  char won=(*pgame).traps.active[move][(*pgame).heights[move]][player-1];
   (*pgame).heights[move]++;
   (*pgame).hist.hist[(*pgame).hist.length]=move;
   (*pgame).hist.length++;
-  updatetraps(pgame);
+  updatetraps(pgame, player);
   //printstate((*pgame).state);
-  return inaline((*pgame).state,move,(*pgame).heights[move]-1); // returns whether or not player has won
+  return won;// inaline((*pgame).state,move,(*pgame).heights[move]-1); // returns whether or not player has won
 }
 
 void reverttraps(gamestate* pgame) {
   char trap, col, row;
-  char player=2-(plys%2);
+  char player=2-((*pgame).plys%2);
+  //printf("%d\n",(*pgame).plys);
   for (trap=(*pgame).traps.histc[(*pgame).plys-1];trap<(*pgame).traps.histc[(*pgame).plys];trap++) {
     col=(*pgame).traps.histt[trap][0];
     row=(*pgame).traps.histt[trap][1];
-    all[row][col][player]=0;
-    active[row][col][player]=0;
+    (*pgame).traps.all[col][row][player-1]=0;
+    (*pgame).traps.active[col][row][player-1]=0;
   }
   col=(*pgame).hist.hist[(*pgame).hist.length-1];
   row=(*pgame).heights[col]-1;
-  active[col][row]=all[col][row];
+  (*pgame).traps.active[col][row][0]=(*pgame).traps.all[col][row][0];
+  (*pgame).traps.active[col][row][1]=(*pgame).traps.all[col][row][1];
 }
 
 void undomove(gamestate* pgame) {
