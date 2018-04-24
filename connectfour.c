@@ -3,7 +3,7 @@
 #include<time.h>
 //#include<math.h>
 
-const char MAXDEPTH=14;
+const char MAXDEPTH=12;
 
 typedef struct movet movet;
 struct movet {
@@ -21,7 +21,7 @@ typedef struct traps traps;
 struct traps {
   char active[7][6][2];
   char all[7][6][2];
-  char histc[42];
+  char histc[43];
   char histt[84][2];
 };
 
@@ -117,6 +117,8 @@ char inaline(char state[7][6],char col,char row) {
 }
 */
 
+void printtraps(traps traps);
+
 void addtrap(gamestate* pgame,char col, char row, char player,char trapnum) {
   (*pgame).traps.histt[trapnum][0]=col;
   (*pgame).traps.histt[trapnum][1]=row;
@@ -129,14 +131,14 @@ void updatetraps(gamestate* pgame,char player) {
   char col=(*pgame).hist.hist[(*pgame).hist.length-1];
   char row=(*pgame).heights[col]-1;
   for (char pl=0; pl<2;pl++){
-  (*pgame).traps.active[col][row][pl]=0;
+    (*pgame).traps.active[col][row][pl]=0;
   }
   char trapnum=(*pgame).traps.histc[(*pgame).plys-1];
   if (row>1 && row<5 && (*pgame).state[col][row-1]==player && (*pgame).state[col][row-2]==player) {
-    addtrap(pgame,col,row,player,trapnum);
+    addtrap(pgame,col,row+1,player,trapnum);
     trapnum++;
   }
-  char otherplayer=player-3;
+  char otherplayer=3-player;
   char dirr;
   char ccol,crow;
   char f,b;
@@ -146,42 +148,60 @@ void updatetraps(gamestate* pgame,char player) {
     empc=0;
     crow=row+dirr;
     ccol=col+1;
-    while (!(f>2 || crow>5 || crow<0  || ccol>6 || (*pgame).state[ccol][crow]==otherplayer)) {
-      f++;
-      if ((*pgame).state[ccol][crow]==0) {
-	if (empc==1) {break;}
-	empc=1;
-	empf=f;
-      }
+    while (!(f>2 || crow>5 || crow<0  || ccol>6 || ccol<0 || (*pgame).state[ccol][crow]==otherplayer)) {
 
+      if ((*pgame).state[ccol][crow]==0) {
+	if (empc) {break;}
+	empc=1;
+	empf=f+1;
+      }
+      f++;
       ccol++;
       crow+=dirr;
+    }
+    if (empc==0) {
+      empf=f+1;
     }
     b=0;
     empc=0;
     crow=row-dirr;
     ccol=col-1;
-    while (!(b>2 || crow>5 || crow<0  || ccol>6 || (*pgame).state[ccol][crow]==otherplayer)) {
-      b++;
+    while (!(b>2 || crow>5 || crow<0  || ccol>6 || ccol<0 || (*pgame).state[ccol][crow]==otherplayer)) {
       if ((*pgame).state[ccol][crow]==0) {
-	if (empc==1) {break;}
+	if (empc) {break;}
 	empc=1;
-	empb=b;
+	empb=b+1;
       }
+      b++;
       ccol--;
       crow-=dirr;
     }
+    if (empc==0) {
+      empb=b+1;
+    }
+    //printf("empb, empf, f, b %d %d %d %d\n",empb,empf,f,b);
     if (f+b>2) {
-      if (empb+f>3) {
-	addtrap(pgame,col+empf,row+empf*dirr,player,trapnum);
-	trapnum++;
+      if (empb+f>3 && empf<=f) {
+	ccol=col+empf;
+	crow=row+empf*dirr;
+	//printf("%d %d %d\n",ccol,crow, (*pgame).traps.all[ccol][crow]);
+	if ((*pgame).traps.all[ccol][crow][player-1]==0) {
+	  //printf("%d %d\n",ccol,crow);
+	  addtrap(pgame,ccol,crow,player,trapnum);
+	  trapnum++;
+	}
       }
-      if (empf+b>3) {
-	addtrap(pgame,col-empb,row-empb*dirr,player,trapnum);
-	trapnum++;
+      if (empf+b>3 && empb<=b) {
+	ccol=col-empb;
+	crow=row-empb*dirr;
+	if ((*pgame).traps.all[ccol][crow][player-1]==0) {
+	  addtrap(pgame,ccol,crow,player,trapnum);
+	  trapnum++;
+	}
       }
     }    
   }
+  //printf("%d %d\n",(*pgame).plys, trapnum);
   (*pgame).traps.histc[(*pgame).plys]=trapnum;
 }
 
@@ -241,6 +261,7 @@ movet findmove(gamestate* pgame, char depth, char a, char b) {
 	  nextqual=findmove(pgame,depth+1,-b,-a).qual;
 	  nextqual=-nextqual;
 	}
+	//printtraps((*pgame).traps);
 	undomove(pgame);
 	if (nextqual>retval.qual) {
 	  retval.qual=nextqual;
@@ -296,6 +317,30 @@ void printstate(char state[7][6]) {
   }
 }
 
+void printtraps(traps traps) {
+  char row,col,val;
+  printf("\n1 2 3 4 5 6 7 \n");
+  for (row=5;row>=0;row--) {
+    for (col=0;col<7;col++) {
+      val=0;
+      val+=traps.all[col][row][0];
+      val+=traps.all[col][row][1]+traps.all[col][row][1];
+      printf("%d ",(int) val);
+    }
+    printf("\n");
+  }
+
+  for (char ply=0;ply<43;ply++) {
+    printf("%d ",traps.histc[ply]);
+  }
+  printf("\n");
+  for (char ply=0;ply<10;ply++) {
+    printf("%d %d   ",traps.histt[ply][0],traps.histt[ply][1]);
+  }
+  printf("\n");
+}
+
+
 char getmove(char player) {
   printf("Player %d, please enter the column number you want to play in (1 to 7):\n",(int) player);
   while (1) {
@@ -308,15 +353,27 @@ int main () {
   gamestate game;
   for (char i=0;i<7;i++) {
     for (char j=0;j<6;j++) {
+      for (char k=0;k<2;k++) {
+	game.traps.all[i][j][k]=0;
+	game.traps.active[i][j][k]=0;
+      }
       game.state[i][j]=0;
     }
     game.heights[i]=0;
   }
   game.hist.length=0;
   game.plys=0;
+  game.traps.histc[0]=0;
+  for (char i=0;i<43;i++) {
+    game.traps.histc[i]=0;
+  }
+  for (char i=0;i<84;i++) {
+    game.traps.histt[i][0]=0;
+    game.traps.histt[i][1]=0;
+  }
 
   
-  char automated[3]={0,1,0};
+  char automated[3]={0,1,1};
   char player=1;
   char move;
   srand(time(NULL));
@@ -336,6 +393,7 @@ int main () {
     }
     char iswon=makemove(move,&game);
     printstate(game.state);
+    printtraps(game.traps);
     if (iswon) {
       printf("Player %d wins.\n",(int) player);
       break;
