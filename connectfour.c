@@ -245,11 +245,26 @@ void undomove(gamestate* pgame) {
 
 movet findmove(gamestate* pgame, char depth, char a, char b) {
   movet retval;
-  char move;
+  char move,row;
   char qual[7], nextqual;
+  char player= 1+(*pgame).plys%2;
   retval.move=0;
   retval.qual=-43;
+  for (move=0; move<7;move++) {
+    row=(*pgame).heights[move];
+    if (row<6 && (*pgame).traps.active[move][row][player-1]) {
+      retval.move=move;
+      retval.qual=42;
+      return retval;
+    }
+  }
   char offset=rand()%7;
+  for (move=0; move<7;move++) {
+    row=(*pgame).heights[move];
+    if (row<6 && (*pgame).traps.active[move][row][2-player]) {
+      offset=move;
+    }
+  }
   if (depth<MAXDEPTH && (*pgame).plys<42) {
     for (char cmove=0;cmove<7;cmove++) {
       move=(cmove+offset)%7;
