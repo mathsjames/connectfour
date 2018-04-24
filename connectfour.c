@@ -4,6 +4,7 @@
 //#include<math.h>
 
 const char MAXDEPTH=12;
+const char MAXQUAL=84;
 
 typedef struct movet movet;
 struct movet {
@@ -245,23 +246,24 @@ void undomove(gamestate* pgame) {
 
 movet findmove(gamestate* pgame, char depth, char a, char b) {
   movet retval;
-  char move,row;
+  char move,col,row,val;
   char qual[7], nextqual;
-  char player= 1+(*pgame).plys%2;
+  char playerm1= (*pgame).plys%2;
+  char opm1=1-playerm1;
   retval.move=0;
   retval.qual=-43;
   for (move=0; move<7;move++) {
     row=(*pgame).heights[move];
-    if (row<6 && (*pgame).traps.active[move][row][player-1]) {
+    if (row<6 && (*pgame).traps.active[move][row][playerm1]) {
       retval.move=move;
-      retval.qual=42;
+      retval.qual=MAXQUAL;
       return retval;
     }
   }
   char offset=rand()%7;
   for (move=0; move<7;move++) {
     row=(*pgame).heights[move];
-    if (row<6 && (*pgame).traps.active[move][row][2-player]) {
+    if (row<6 && (*pgame).traps.active[move][row][opm1]) {
       offset=move;
     }
   }
@@ -270,7 +272,7 @@ movet findmove(gamestate* pgame, char depth, char a, char b) {
       move=(cmove+offset)%7;
       if ((*pgame).heights[move]<6) {
 	if (makemove(move,pgame)) {
-	  nextqual=42;
+	  nextqual=MAXQUAL;
 	}
 	else {
 	  nextqual=findmove(pgame,depth+1,-b,-a).qual;
@@ -297,7 +299,13 @@ movet findmove(gamestate* pgame, char depth, char a, char b) {
     retval.qual=0;//drawn game
   }
   else {
-    retval.qual=0;//heuristic value
+    retval.qual=0;
+    for (col=0;col<7;col++) {
+      for (row=0;row<6;row++) {
+	retval.qual+=(*pgame).traps.active[col][row][playerm1]-(*pgame).traps.active[col][row][opm1];
+      }
+    }
+    //heuristic value
   }
 
   
@@ -388,7 +396,7 @@ int main () {
   }
 
   
-  char automated[3]={0,1,1};
+  char automated[3]={0,0,1};
   char player=1;
   char move;
   srand(time(NULL));
