@@ -366,10 +366,12 @@ void printtraps(traps traps) {
 
 char getmove(char player) {
   printf("Player %d, please enter the column number you want to play in (1 to 7):\n",(int) player);
-  while (1) {
-    char move=getchar()-'1';
-    if (getchar()=='\n') {return move;}
-  }
+  char move=getchar()-'1';
+  char done=1;
+  while (getchar()!='\n') { done=0; }
+  if (done && move>-1 && move<7) { return move; }
+  printf("Just put a digit from 1 to 7 and press return");
+  return getmove(player);
 }
 
 int main () {
@@ -409,14 +411,15 @@ int main () {
       move=findmove(&game,0,-50,50).move;
       //printstate(game.state);
       //printf("move %d player %d\n",move,player);
-      //printf("heights %d %d %d %d %d %d %d\n",game.heights[0],game.heights[1],game.heights[2],game.heights[3],game.heights[4],game.heights[5],game.heights[6]);
+
     }
     else {
       move=getmove(player);
     }
     char iswon=makemove(move,&game);
     printstate(game.state);
-    printtraps(game.traps);
+    //printf("heights %d %d %d %d %d %d %d\n",game.heights[0],game.heights[1],game.heights[2],game.heights[3],game.heights[4],game.heights[5],game.heights[6]);
+    //printtraps(game.traps);
     if (iswon) {
       printf("Player %d wins.\n",(int) player);
       break;
