@@ -34,7 +34,7 @@ struct gamestate {
   history hist;
   char plys;
   traps traps;
-  char killers[42];
+  char killers[43];
 };
 
 double mypow(double a,char b) {
@@ -399,6 +399,7 @@ int main (int argc,char *argv[]) {
   game.traps.histc[0]=0;
   for (char i=0;i<43;i++) {
     game.traps.histc[i]=0;
+    game.killers[i]=0;
   }
   for (char i=0;i<84;i++) {
     game.traps.histt[i][0]=0;
@@ -440,7 +441,7 @@ int main (int argc,char *argv[]) {
     char iswon=makemove(move,&game);
     printf("Player %d plays in column %d",player,move+1);
     printstate(game.state);
-    //printf("heights %d %d %d %d %d %d %d\n",game.heights[0],game.heights[1],game.heights[2],game.heights[3],game.heights[4],game.heights[5],game.heights[6]);
+    //printf("\n heights %d %d %d %d %d %d %d\n \n",game.heights[0],game.heights[1],game.heights[2],game.heights[3],game.heights[4],game.heights[5],game.heights[6]);
     //printtraps(game.traps);
     if (iswon) {
       printf("Player %d wins.\n",(int) player);
