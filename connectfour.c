@@ -398,7 +398,7 @@ int main () {
   }
 
   
-  char automated[3]={0,0,1};
+  char automated[3]={0,1,0};
   char player=1;
   char move;
   srand(time(NULL));
@@ -406,15 +406,19 @@ int main () {
   printstate(game.state);
   while (1) {
     player=1+game.plys%2;
-    if (automated[player]==1) {
+    if (automated[player]) {
       //printstate(game.state);
-      move=findmove(&game,0,-50,50).move;
+      move=findmove(&game,0,-MAXQUAL-1,MAXQUAL+1).move;
       //printstate(game.state);
       //printf("move %d player %d\n",move,player);
 
     }
     else {
       move=getmove(player);
+      while (game.heights[move]>5) {
+	printf("That column is already full.\n");
+	move=getmove(player);
+      }
     }
     char iswon=makemove(move,&game);
     printstate(game.state);
