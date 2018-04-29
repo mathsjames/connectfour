@@ -35,7 +35,7 @@ int main (int argc,char *argv[]) {
   }
 
   char player;  
-  char automated[3]={0,0,-1};
+  char automated[3]={0,-1,-1};
   if (argc>2) {
     for (player=1;player<3;player++) {
       automated[player]=(argv[player])[0]-'0';
@@ -55,10 +55,10 @@ int main (int argc,char *argv[]) {
     if (automated[player]) {
       //printstate(game.state);
       if (automated[player]>0) {
-      move=findabmove(&game,0,-MAXQUAL-1,MAXQUAL+1,automated[player]).move;
+	move=findabmove(&game,0,-MAXQUAL-1,MAXQUAL+1,automated[player]).move;
       }
       else {
-      move=findmcmove(&game,1000000);
+	move=findmcmove(&game,10000);
       }
       //printstate(game.state);
       //printf("move %d player %d\n",move,player);

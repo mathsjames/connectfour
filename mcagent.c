@@ -5,7 +5,6 @@
 #include "backendutilities.h"
 #include "frontendutilities.h"
 
-
 typedef struct mcnode mcnode;
 struct mcnode {
   char depth;
@@ -125,6 +124,7 @@ char findmcmove(gamestate* pgame, int rollouts) {
   gamestate game, rootgame;
   rootgame=*pgame;
   char move,result,currplys;
+  move=0;
   wipemcnode(&root,NULL);
   char done;
   int countdirectwins=0, countdirectdraws=0, countproperrollouts=0;
@@ -136,34 +136,50 @@ char findmcmove(gamestate* pgame, int rollouts) {
     //printf("%d\n",rollouts);
     current=&root;
     while ((*current).filled==7 && !done) {
-      while ((*current).filled==7 && !done) {
-	move=choosechild(current);
-	//printstate(game.state);
-	//printtraps(game.traps);
-	if (makemove(move,&game)) {
-	  (*current).counts[move]+=1;
-	  (*current).sums[move]+=10;
-	  backprop(current,1,game.plys,game.hist.hist);
+      move=choosechild(current);
+      //printstate(game.state);
+      //printtraps(game.traps);
+      if (makemove(move,&game)) {
+	(*current).counts[move]+=1;
+	(*current).sums[move]+=10;
+	backprop(current,1,game.plys,game.hist.hist);
+	rollouts--;
+	countdirectwins++;
+	done=1;
+      }
+      else {
+	if (game.plys==42) {
+	  (*current).counts[move]++;
+	  backprop(current,0,game.plys,game.hist.hist);
 	  rollouts--;
-	  countdirectwins++;
+	  countdirectdraws++;
 	  done=1;
 	}
-	else {
-	  if (game.plys==42) {
-	    (*current).counts[move]++;
-	    backprop(current,0,game.plys,game.hist.hist);
-	    rollouts--;
-	    countdirectdraws++;
-	    done=1;
-	  }
-	}
-	if (!done) {
+      }
+      if (!done) {
+	if ((*current).children[move]) {
 	  //printf("move:%d height:%d newpointer:%d\n",move,game.heights[move],(*current).children[move]);
 	  current=((*current).children[move]);
 	}
+	else {
+	  break;
+	}
       }
     }
-    if (!done) {
+
+    
+    if (!(*current).children[move]) {
+      (*current).children[move]=malloc(sizeof(mcnode));
+      if (!(*current).children[move]) {
+	printf("ERROR: malloc failed!\n");
+	break;
+      }
+      wipemcnode((*current).children[move],current);
+      current=(*current).children[move];
+    }
+
+
+    if (!done) {    
       if (game.heights[(*current).filled]>5) {
 	(*current).sums[(*current).filled]=-1000;
 	(*current).counts[(*current).filled]+=1;
@@ -189,12 +205,6 @@ char findmcmove(gamestate* pgame, int rollouts) {
 	  countdirectdraws++;
 	}
 	else {
-	  (*current).children[move]=malloc(sizeof(mcnode));
-	  if (!(*current).children[move]) {
-	    printf("ERROR: malloc failed!\n");
-	    break;
-	  }
-	  wipemcnode((*current).children[move],current);
 	  currplys=game.plys;
 	  result=rollout(&game);
 	  //printf("%d %d %d\n",move,root.counts[move],(*current).counts[move]);
@@ -213,9 +223,9 @@ char findmcmove(gamestate* pgame, int rollouts) {
   float value=-2;
   float newvalue;
   for (char i=0;i<7;i++) {
-    //printf("for:%d count:%d sum:%d tobeatwas:%f",i,root.counts[i],root.sums[i],value);
+    printf("for:%d count:%d sum:%d tobeatwas:%f",i,root.counts[i],root.sums[i],value);
     newvalue=((float)root.sums[i])/root.counts[i];
-    //printf("scoreis:%f\n",newvalue);
+    printf("scoreis:%f\n",newvalue);
     if (newvalue>value) {
       value=newvalue;
       move=i;
