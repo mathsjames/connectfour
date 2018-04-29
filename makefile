@@ -1,8 +1,8 @@
 CC=gcc
-CFLAGS=-I.
+CFLAGS=-g -I.
 
-make: connectfour.o backendutilities.o frontendutilities.o abagent.o
-	$(CC) -o connectfour connectfour.o backendutilities.o frontendutilities.o abagent.o -I.
+make: connectfour.o backendutilities.o frontendutilities.o abagent.o mcagent.o gamestructure.o
+	$(CC) -o connectfour connectfour.o backendutilities.o frontendutilities.o abagent.o mcagent.o gamestructure.o -g -lm -I.
 
 clean:
 	-rm *.o

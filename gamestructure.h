@@ -28,3 +28,5 @@ struct gamestate {
   traps traps;
   char killers[43];
 };
+
+gamestate mccopy(gamestate game);
